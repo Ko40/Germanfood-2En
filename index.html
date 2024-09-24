@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>フリップカードで単語学習</title>
+  <style>
+    /* カードのスタイル */
+    .card {
+      perspective: 1000px;
+      width: 300px;
+      height: 200px;
+      margin: 50px auto;
+      cursor: pointer;
+    }
+    /* カードの内側 */
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.8s;
+      transform-style: preserve-3d;
+    }
+    /* カードがフリップしたときのスタイル */
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    /* カードの前面と背面 */
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      border-radius: 10px;
+    }
+    /* 前面のスタイル（ドイツ語の単語） */
+    .card-front {
+      background-color: #3498db;
+    }
+    /* 背面のスタイル（英語の単語） */
+    .card-back {
+      background-color: #2ecc71;
+      transform: rotateY(180deg);
+    }
+
+    /* ボタンの配置 */
+    .nav-button {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #previous-btn {
+      left: 0;
+    }
+    #next-btn {
+      right: 0;
+    }
+    /* ボタンを非表示にするスタイル */
+    .hidden {
+      display: none;
+    }
+    /* 中央のボタンのスタイル */
+    #back-to-start-btn {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<h2 style="text-align: center;">German words card</h2>
+
+<div class="card" onclick="flipCard()">
+  <div class="card-inner">
+    <div class="card-front" id="german-word">
+      ドイツ語単語
+    </div>
+    <div class="card-back" id="english-word">
+      英語単語
+    </div>
+  </div>
+</div>
+
+<button id="previous-btn" class="nav-button hidden" onclick="prevWord()">Previous Word</button>
+<button id="back-to-start-btn" onclick="backToStart()">Back to Start</button>
+<button id="next-btn" class="nav-button" onclick="nextWord()">Next Word</button>
+
+<script>
+  // 単語リスト（German - English）
+const wordList = [
+  { german: 'der Weizen', english: 'wheat' },
+  { german: 'das Mehl', english: 'flour' },
+  { german: 'der Teig', english: 'dough' },
+  { german: 'das Öl', english: 'oil' },
+  { german: 'das Fett', english: 'fat/lard' },
+  { german: 'der Essig', english: 'vinegar' },
+  { german: 'pl. Kräuter', english: 'herbs' },
+  { german: 'der Pfeffer', english: 'pepper' },
+  { german: 'das Salz', english: 'salt' },
+  { german: 'der Zucker', english: 'sugar' },
+  { german: 'die Sahne', english: 'cream' },
+  { german: 'der Rahm', english: 'cream' },
+  { german: 'die Senf', english: 'mustard' },
+  { german: 'die Soße', english: 'sauce/dressing' },
+  { german: 'die Fleischsoße', english: 'meat sauce' },
+  { german: 'die Rahmsoße', english: 'cream sauce' },
+  { german: 'die Sojasoße', english: 'soy sauce' },
+  { german: 'die Schokoladensoße', english: 'chocolate sauce' },
+  { german: 'die Tomatensoße', english: 'tomato sauce' },
+  { german: 'die Pfeffermühle', english: 'pepper mill' },
+  { german: 'die Kaffesahne', english: 'creamer' },
+  { german: 'die Schlagsahne', english: 'whipped cream' },
+  { german: 'fettarm', english: 'low-fat' },
+  { german: 'salzig', english: 'salty' },
+  { german: 'das Wasser', english: 'water' },
+  { german: 'der Saft', english: 'juice' },
+  { german: 'die Milch', english: 'milk' },
+  { german: 'der Kaffee', english: 'coffee' },
+  { german: 'der Tee', english: 'tea' },
+  { german: 'der Alkohol', english: 'alcohol' },
+  { german: 'das Bier', english: 'beer' },
+  { german: 'der Sekt', english: 'sparkling wine' },
+  { german: 'der Wein', english: 'wine' },
+  { german: 'der grüner Tee', english: 'green tea' },
+  { german: 'das Leitungswasser', english: 'tapwater' },
+  { german: 'das Mineralwasser', english: 'mineral water' },
+  { german: 'das Trinkwasser', english: 'drinking water' },
+  { german: 'wasserdicht', english: 'waterproof' },
+  { german: 'wasserfest', english: 'waterproof/water resistant' },
+  { german: 'der Milchkaffee', english: 'milk coffee/coffee with cream' },
+  { german: 'das Milchprodukt', english: 'dairz product/milk product' },
+  { german: 'die Milchstraße', english: 'Milky Way' },
+  { german: 'die Muttermilch', english: 'breast milk' },
+  { german: 'der Alkoholgehalt', english: 'alcoholic content' },
+  { german: 'der Alkoholiker', english: 'alcoholic' },
+  { german: 'alkoholfrei', english: 'nonßalcoholic/alcoholfree' },
+  { german: 'alkoholhaltig', english: 'alcoholic' },
+  { german: 'das Fassbier', english: 'draught beer/draft beer' },
+  { german: 'das Flaschenbier', english: 'bottled beer' },
+  { german: 'lecker', english: 'tasty' },
+  { german: 'köstlich', english: 'delicious' },
+  { german: 'süß', english: 'sweet/cute' },
+  { german: 'salzig', english: 'salty' },
+  { german: 'scharf', english: 'sharp' },
+  { german: 'bitter', english: 'bitter' },
+  { german: 'hungrig', english: 'hungry' },
+  { german: 'durstig', english: 'thirsty' },
+  { german: 'betrunken', english: 'drunk' },
+  { german: 'satt', english: 'full/sich and tired of' },
+  { german: 'Ich habe Hunger', english: 'Iäm hungry' },
+  { german: 'Ich habe Durst', english: 'Iäm thirsty' },
+  { german: 'gebraten', english: 'roasted/grilled/baked' },
+  { german: 'gerösten', english: 'roasted/grilled/baked' },
+  { german: 'gebacken', english: 'backed/fried' },
+  { german: 'gedämpft', english: 'steamed' },
+  { german: 'gekocht', english: 'boiled/cooked' },
+  { german: 'der Eintopf', english: '煮込み料理' },
+  { german: 'das Gulasch', english: '牛肉シチュー' },
+  { german: 'die Frikadelle', english: 'ミートボール' },
+  { german: 'das Kotelett', english: 'カツレツ' },
+  { german: 'das Schnitzel', english: 'シュニッツェル' },
+  // 他の単語を追加
+];
+
+  let currentIndex = 0;
+
+  // カードをフリップする関数
+  function flipCard() {
+    const card = document.querySelector('.card');
+    card.classList.toggle('flipped');
+  }
+
+  // 次の単語を表示する関数
+  function nextWord() {
+    if (currentIndex < wordList.length - 1) {
+      currentIndex++;
+    }
+    updateWord();
+  }
+
+  // 前の単語を表示する関数
+  function prevWord() {
+    if (currentIndex > 0) {
+      currentIndex--;
+    }
+    updateWord();
+  }
+
+  // 最初の単語に戻る関数
+  function backToStart() {
+    currentIndex = 0;
+    updateWord();
+  }
+
+  // 単語を更新して、ボタンの表示を調整する関数
+  function updateWord() {
+    // ドイツ語と英語の単語を更新
+    document.getElementById('german-word').innerHTML = wordList[currentIndex].german;
+    document.getElementById('english-word').innerHTML = wordList[currentIndex].english;
+
+    // フリップがされたままの場合、戻す
+    const card = document.querySelector('.card');
+    if (card.classList.contains('flipped')) {
+      card.classList.remove('flipped');
+    }
+
+    // ボタンの表示を制御
+    document.getElementById('previous-btn').classList.toggle('hidden', currentIndex === 0);
+    document.getElementById('next-btn').classList.toggle('hidden', currentIndex === wordList.length - 1);
+  }
+
+  // ページ読み込み時に最初の単語を表示
+  window.onload = function() {
+    updateWord();
+  }
+</script>
+
+</body>
+</html>
